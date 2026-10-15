@@ -10,6 +10,16 @@ import '../../../domain/models/exercise_content.dart';
 class ContentService {
   ContentService(this._dio);
 
+  /// Exercise types this version can play. The API also has `audio` and
+  /// `video`; showing them would block the linear path on an exercise
+  /// nobody can complete, so they are left out of the map.
+  static const playableTypes = {
+    'quiz',
+    'reading',
+    'writing',
+    'oratory_minigame',
+  };
+
   final Dio _dio;
 
   Future<List<Track>> getTracks() async {
@@ -70,6 +80,7 @@ class ContentService {
       exercises:
           (json['exercises'] as List?)
               ?.map((e) => _mapPivotExercise(e as Map<String, dynamic>))
+              .where((e) => playableTypes.contains(e.type))
               .toList() ??
           [],
     );
