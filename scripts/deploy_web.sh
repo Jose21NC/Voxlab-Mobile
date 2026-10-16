@@ -15,7 +15,10 @@ HOST="${VOXLAB_HOST:-root@2.25.197.140}"
 KEY="${VOXLAB_SSH_KEY:-$HOME/.ssh/voxlab_vps}"
 DEST=/opt/voxlab/webapp
 
-flutter build web --release --base-href /app/ -t lib/main.dart
+# --no-web-resources-cdn: serve the CanvasKit engine from our server, not
+# gstatic.com, which some school and office firewalls block (the app then
+# hangs on the splash).
+flutter build web --release --base-href /app/ --no-web-resources-cdn -t lib/main.dart
 
 if [[ "${1:-}" == "--dry" ]]; then
   echo "Build listo en build/web (no se subió)."
