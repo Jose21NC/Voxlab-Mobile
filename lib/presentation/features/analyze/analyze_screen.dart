@@ -43,7 +43,7 @@ class AnalyzeScreen extends ConsumerWidget {
       body: SafeArea(
         bottom: false,
         child: entries.isEmpty
-            ? _EmptyAnalysis(onGoPractice: () => context.go(AppRoutes.practice))
+            ? _EmptyAnalysis(onGoPractice: () => context.go(AppRoutes.map))
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
@@ -349,8 +349,8 @@ class _EmptyAnalysis extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             ChunkyButton(
-              label: 'IR A PRACTICAR',
-              icon: Icons.fitness_center_rounded,
+              label: 'IR A APRENDER',
+              icon: Icons.map_rounded,
               onPressed: onGoPractice,
             ),
           ],
