@@ -26,6 +26,8 @@ if ! xcrun simctl list devices booted | grep -q Booted; then
 fi
 
 flutter build ios --simulator --debug "${args[@]}"
-xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl launch --terminate-running-process booted com.example.voxlab
+APP=build/ios/iphonesimulator/Runner.app
+xcrun simctl install booted "$APP"
+xcrun simctl launch --terminate-running-process booted \
+  "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")"
 echo "Listo: Voxlab (${1:-demo}) corriendo en el simulador."
