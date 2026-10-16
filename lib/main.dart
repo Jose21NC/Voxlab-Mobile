@@ -4,21 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/constants/app_colors.dart';
+import 'core/network/error_reporter.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  final container = ProviderContainer();
 
   if (kReleaseMode) {
+    final reporter = container.read(errorReporterProvider);
     FlutterError.onError = (details) {
       debugPrint('FlutterError: ${details.exceptionAsString()}');
+      reporter.report(details.exception, details.stack);
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      reporter.report(error, stack);
+      return true;
     };
     ErrorWidget.builder = (_) => const _FallbackErrorWidget();
   }
 
   runApp(
-    const ProviderScope(
-      child: VoxlabApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const VoxlabApp()),
   );
 }
 
