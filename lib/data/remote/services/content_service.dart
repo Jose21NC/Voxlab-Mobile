@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/storage/secure_storage.dart';
 import '../../../domain/models/track.dart';
 import '../../../domain/models/module.dart';
 import '../../../domain/models/lesson.dart';
@@ -8,7 +12,7 @@ import '../../../domain/models/exercise.dart';
 import '../../../domain/models/exercise_content.dart';
 
 class ContentService {
-  ContentService(this._dio);
+  ContentService(this._dio, [this._cache]);
 
   /// Exercise types this version can play. The API also has `audio` and
   /// `video`; showing them would block the linear path on an exercise
@@ -22,16 +26,56 @@ class ContentService {
 
   final Dio _dio;
 
+  /// Last content the server sent, so the map and the exercises still open
+  /// without a connection.
+  final SecureStorage? _cache;
+  static const _cacheKey = 'voxlab_tracks_cache';
+
   Future<List<Track>> getTracks() async {
-    final response = await _dio.get('/tracks');
-    final data = response.data['data'] as List;
+    List data;
+    try {
+      final response = await _dio.get('/tracks');
+      data = response.data['data'] as List;
+      try {
+        await _cache?.writeString(_cacheKey, jsonEncode(data));
+      } catch (e) {
+        debugPrint('Content cache write failed: $e');
+      }
+    } on DioException {
+      final cached = await _readCache();
+      if (cached == null) rethrow;
+      data = cached;
+    }
     return data.map((e) => _mapTrack(e as Map<String, dynamic>)).toList();
   }
 
+  Future<List?> _readCache() async {
+    try {
+      final raw = await _cache?.readString(_cacheKey);
+      return raw == null ? null : jsonDecode(raw) as List;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<Exercise> getExercise(String id) async {
-    final response = await _dio.get('/exercises/$id');
-    final data = response.data['data'] as Map<String, dynamic>;
-    return _mapExercise(data);
+    try {
+      final response = await _dio.get('/exercises/$id');
+      final data = response.data['data'] as Map<String, dynamic>;
+      return _mapExercise(data);
+    } on DioException {
+      // Offline: the cached tracks embed every exercise.
+      final cached = await _readCache();
+      final match = cached
+          ?.map((t) => _mapTrack(t as Map<String, dynamic>))
+          .expand((t) => t.modules)
+          .expand((m) => m.lessons)
+          .expand((l) => l.exercises)
+          .where((e) => e.id == id)
+          .firstOrNull;
+      if (match == null) rethrow;
+      return match;
+    }
   }
 
   Track _mapTrack(Map<String, dynamic> json) {
@@ -104,5 +148,8 @@ class ContentService {
 }
 
 final contentServiceProvider = Provider<ContentService>((ref) {
-  return ContentService(ref.read(apiClientProvider));
+  return ContentService(
+    ref.read(apiClientProvider),
+    ref.read(secureStorageProvider),
+  );
 });
